@@ -786,13 +786,13 @@ func (m Model) renderMissionList(width, height int) string {
 		if m.filterByMission {
 			modeLabel = "Mission"
 		}
-		header := titleStyle.Render("Find") + commentStyle.Render(" | ") + titleStyle.Render(modeLabel)
-		count := fmt.Sprintf("%d/%d", len(m.filterIndices), len(f.missions))
-		pad := textWidth - lipgloss.Width(header) - len(count)
+		header := titleStyle.Render("Find") + helpSepStyle.Render(" | ") + titleStyle.Render(modeLabel)
+		count := fmt.Sprintf("%d", len(m.filterIndices)) + helpSepStyle.Render("/") + fmt.Sprintf("%d", len(f.missions))
+		pad := textWidth - lipgloss.Width(header) - lipgloss.Width(count)
 		if pad < 1 {
 			pad = 1
 		}
-		sb.WriteString(header + strings.Repeat(" ", pad) + titleStyle.Render(count))
+		sb.WriteString(header + strings.Repeat(" ", pad) + count)
 		sb.WriteString("\n")
 
 		if m.filterTyping {

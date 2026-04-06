@@ -1,52 +1,62 @@
 # Architecture
 
+TUI tool for editing themes.xml in Terminator: Dark Fate mods. Go + Bubble Tea + Lip Gloss.
+
 See also [[delivery]], [[environments]], [[tests]].
-
-## System shape
-
-Standalone TUI tool for editing `themes.xml` files in Terminator: Dark Fate — Defiance mods. Built with Go + [Bubble Tea](https://github.com/charmbracelet/bubbletea) + [Lip Gloss](https://github.com/charmbracelet/lipgloss).
 
 ## Source files
 
+Five Go files, each with a single responsibility.
+
 | File | Responsibility |
 |------|---------------|
-| [[main.go]] | Entry point. Loads theme files from mod directory, builds `[]FileState`, launches TUI |
-| [[model.go]] | Bubble Tea Model — all state, Update logic, View rendering. Modes: View, Add (toggle), Reorder, Edit |
-| [[xml.go]] | XML parser (`ParseThemesXML`), serializer (`SerializeThemesXML`), mission sorting. Byte-offset precision for surgical edits |
-| [[keys.go]] | Key bindings (`keyMap` struct). All hotkeys defined here |
-| [[styles.go]] | Lip Gloss styles — colors, borders, selectors, tab styles |
+| [[main.go]] | Entry point, file loading, profile definitions |
+| [[model.go]] | Bubble Tea Model — state, Update, View. Modes: View, Add, Reorder, Edit |
+| [[xml.go]] | XML parser, serializer, mission sorting. Byte-offset precision |
+| [[keys.go]] | Key bindings (`keyMap` struct) |
+| [[styles.go]] | Lip Gloss styles — colors, borders, selectors |
 
 ## Data model
 
-- `FileState` — per-profile state: label, filePath, missions slice, xmlBytes, dirty flag, cursor positions, sort state
-- `Mission` — parsed from XML Row: Name, Themes (track list), OriginalThemes (for restore), Comment, byte offsets for serialization, OrigOrder (for unsorted view)
-- `Model` — global: files slice, activeFile index, mode, filter state, edit state, confirmations
+Three core structs hold all application state.
+
+- `FileState` — per-profile: label, filePath, missions, xmlBytes, dirty, cursors, sort state
+- `Mission` — from XML: Name, Themes, OriginalThemes, Comment, byte offsets, OrigOrder
+- `Model` — global: files, activeFile, mode, filter state, edit state, confirmations
 
 ## Key architectural decisions
 
-- **Byte-offset editing**: Parser tracks exact byte positions of theme data in XML. Serializer applies edits in reverse order to preserve offsets. No full XML re-serialization — only theme cells are touched.
-- **Filter over search**: No separate search mode. Filter overlays the mission list — all modes (toggle, order, edit) work on filtered results. `missionCursor` always points to real index in `f.missions`.
-- **Per-file state**: Each profile (Original/Resistance/Legion) has independent cursor, scroll, dirty state. Switching profiles preserves position.
-- **Dirty calculation**: `recalcDirty()` compares current themes with `OriginalThemes` per mission. Restore correctly clears dirty flag.
+Design choices that shape the codebase.
+
+- **Byte-offset editing**: parser tracks byte positions, serializer applies edits in reverse order
+- **Filter over search**: filter overlays mission list, all modes work on filtered results
+- **Per-file state**: each profile has independent cursor, scroll, dirty state
+- **Dirty calculation**: `recalcDirty()` compares themes with originals per mission
 
 ## Modes and transitions
 
+The TUI has four modes plus an inline filter overlay.
+
 ```
-View ←→ Toggle (t)
-View ←→ Reorder (o)
-View → Filter (f) → View (Esc)
-Reorder ←→ Toggle (t/o)
-Reorder → Edit (e) → Reorder (Enter/Esc)
-Reorder → Add (a) → Reorder (Enter/Esc)
-Toggle → Add (a) → Edit mode
+View <-> Toggle (t)
+View <-> Reorder (o)
+View -> Filter (f) -> View (Esc)
+Reorder <-> Toggle (t/o)
+Reorder -> Edit (e) -> Reorder (Enter/Esc)
+Reorder -> Add (a) -> Reorder (Enter/Esc)
+Toggle -> Add (a) -> Edit mode
 ```
 
 ## Rendering
 
-Two-panel layout: left (missions, 1/4 width) + right (tracks/toggle/order/edit, 3/4 width). Status bar at bottom in rounded border with help keys left, profile tabs right. Title "Music Themes Changer" above panels.
+Two-panel layout with status bar and title.
+
+Left panel (1/4 width): mission list with filter overlay. Right panel (3/4): tracks/toggle/order/edit. Status bar: help keys left, profile tabs right. Title above panels.
 
 ## Constraints
 
-- XML format: Excel XML Spreadsheet (`urn:schemas-microsoft-com:office:spreadsheet`). Row tags may have attributes (`ss:AutoFitHeight`).
-- Track paths stored as `themes/filename.ogg` in XML, displayed without `themes/` prefix.
-- Mute tracks can have duplicates, USA tracks are toggles.
+Hard rules from the game's XML format.
+
+- Excel XML Spreadsheet format. Row tags may have attributes.
+- Tracks stored as `themes/filename.ogg`, displayed without prefix.
+- Mute tracks allow duplicates, USA tracks are toggles.

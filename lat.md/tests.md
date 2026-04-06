@@ -1,44 +1,66 @@
 # Tests
 
+Test strategy and verification for this TUI tool.
+
 See also [[architecture]], [[delivery]].
 
-## No automated tests
+## Required checks
 
-This is a TUI tool — no unit tests currently. Verification is manual.
+Automated gates that must pass before commit.
+
+- `go build` must succeed
+- `lat check` must pass (enforced by pre-commit hook)
 
 ## Manual verification checklist
 
+No automated tests — verification is manual against the running TUI.
+
 ### Core flows
-- [ ] Launch: all 3 profiles load, mission list shows sorted
-- [ ] Navigate: j/k moves cursor, tracks update in right panel
-- [ ] Toggle (t): checkbox panel, Space toggles USA tracks, adds mute tracks
-- [ ] Order (o): J/K moves tracks, d deletes, list updates
-- [ ] Edit (e in order): inline input with current track name, Enter saves, Esc cancels
-- [ ] Add (a in order/toggle): empty input, Enter adds track, Esc cancels
-- [ ] Save (s): file written, "Saved!" message, dirty cleared
-- [ ] Restore (R): confirm prompt, tracks restored to original, dirty recalculated
+
+Essential operations that must work after any change.
+
+- Launch: all 3 profiles load, mission list shows sorted
+- Navigate: j/k moves cursor, tracks update in right panel
+- Toggle (t): Space toggles USA tracks, adds mute tracks
+- Order (o): J/K moves tracks, d deletes
+- Edit (e in order): inline input, Enter saves, Esc cancels
+- Add (a): empty input, Enter adds track
+- Save (s): file written, dirty cleared
+- Restore (R): confirm prompt, tracks restored, dirty recalculated
 
 ### Filter
-- [ ] f activates filter, typing filters live
-- [ ] Tab switches Track/Mission mode
-- [ ] Enter locks filter, j/k navigates filtered list
-- [ ] t/o/e/a/s work on filtered missions
-- [ ] Esc clears filter, full list returns
-- [ ] Sort (r) recomputes filter
+
+Filter overlay must work with all modes.
+
+- f activates, typing filters live
+- Tab switches Track/Mission mode
+- Enter locks, j/k navigates filtered list
+- t/o/e/a/s work on filtered missions
+- Esc clears filter
+- Sort (r) recomputes filter
 
 ### Profiles
-- [ ] p cycles profiles, cursor preserved per-profile
-- [ ] Dirty prompt on switch if unsaved changes
-- [ ] Profile tabs in status bar update
+
+Profile switching must preserve per-file state.
+
+- p cycles profiles, cursor preserved per-profile
+- Dirty prompt on switch if unsaved changes
+- Profile tabs in status bar update
 
 ### Edge cases
-- [ ] Modified indicator (·) appears/disappears correctly
-- [ ] [modified] flag clears after restore all changed missions
-- [ ] Empty mission themes: toggle and order handle gracefully
-- [ ] Sort toggle (r) preserves cursor on same mission
+
+Boundary conditions that have caused bugs before.
+
+- Modified indicator (middot) appears/disappears correctly
+- [modified] clears after restoring all changed missions
+- Empty mission themes handled gracefully
+- Sort toggle (r) preserves cursor on same mission
 
 ## Failure signals
 
-- `go build` must succeed
-- Launch must not crash with any of the 3 XML formats
-- Save must produce valid XML that the game reads
+Conditions that must block a commit or release.
+
+- `go build` failure
+- `lat check` failure
+- Launch crash with any of the 3 XML formats
+- Save produces invalid XML
