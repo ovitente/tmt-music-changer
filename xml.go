@@ -13,7 +13,7 @@ import (
 type Mission struct {
 	Name            string
 	Themes          []string // e.g. ["themes/USA_01.ogg", "themes/02.ogg"]
-	OriginalThemes  []string // snapshot from file load for per-mission restore
+	OriginalThemes  []string // snapshot from last save (or file load) for per-mission restore
 	Comment         string   // optional 3rd column comment
 	ThemesDataStart int      // byte offset of themes <Data> content start
 	ThemesDataEnd   int      // byte offset of themes <Data> content end

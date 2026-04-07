@@ -304,6 +304,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// Update stored bytes so repeated saves are correct
 			f := m.file()
 			f.xmlBytes = SerializeThemesXML(f.xmlBytes, f.missions)
+			// Reset baselines so dots clear and Restore uses saved state
+			for i := range f.missions {
+				f.missions[i].OriginalThemes = make([]string, len(f.missions[i].Themes))
+				copy(f.missions[i].OriginalThemes, f.missions[i].Themes)
+			}
 			f.dirty = false
 			m.statusMsg = "Saved!"
 		}
