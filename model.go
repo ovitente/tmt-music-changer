@@ -304,6 +304,22 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// Update stored bytes so repeated saves are correct
 			f := m.file()
 			f.xmlBytes = SerializeThemesXML(f.xmlBytes, f.missions)
+			// Re-parse to get fresh byte offsets (old offsets are stale after length changes)
+			freshMissions, parseErr := ParseThemesXML(f.xmlBytes)
+			if parseErr == nil {
+				offsetMap := make(map[string]Mission)
+				for _, fm := range freshMissions {
+					offsetMap[fm.Name] = fm
+				}
+				for i := range f.missions {
+					if fresh, ok := offsetMap[f.missions[i].Name]; ok {
+						f.missions[i].ThemesDataStart = fresh.ThemesDataStart
+						f.missions[i].ThemesDataEnd = fresh.ThemesDataEnd
+						f.missions[i].InsertPoint = fresh.InsertPoint
+						f.missions[i].HasThemesCell = fresh.HasThemesCell
+					}
+				}
+			}
 			// Reset baselines so dots clear and Restore uses saved state
 			for i := range f.missions {
 				f.missions[i].OriginalThemes = make([]string, len(f.missions[i].Themes))
@@ -646,6 +662,18 @@ func (m Model) updateReorder(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.editIsNew = false
 			m.editCursor = len(track)
 			m.mode = ModeEdit
+		}
+
+	case key.Matches(msg, keys.CopyTrack):
+		if len(mission.Themes) > 0 {
+			track := mission.Themes[f.reorderCursor]
+			newThemes := make([]string, 0, len(mission.Themes)+1)
+			newThemes = append(newThemes, mission.Themes[:f.reorderCursor+1]...)
+			newThemes = append(newThemes, track)
+			newThemes = append(newThemes, mission.Themes[f.reorderCursor+1:]...)
+			mission.Themes = newThemes
+			f.reorderCursor++
+			m.recalcDirty()
 		}
 
 	case key.Matches(msg, keys.AddTrack):
@@ -1145,7 +1173,7 @@ func (m Model) renderStatus(totalWidth int) string {
 		case ModeAdd:
 			left = helpLine(h("j/k", "navigate"), h("Space", "toggle"), h("a", "add"), h("o", "order"), h("R", "restore"), h("s", "save"), h("Esc", "back"))
 		case ModeReorder:
-			left = helpLine(h("j/k", "navigate"), h("J/K", "move"), h("d", "delete"), h("e", "edit"), h("a", "add"), h("t", "toggle"), h("s", "save"), h("Esc", "back"))
+			left = helpLine(h("j/k", "navigate"), h("J/K", "move"), h("c", "copy"), h("d", "delete"), h("e", "edit"), h("a", "add"), h("t", "toggle"), h("s", "save"), h("Esc", "back"))
 		case ModeEdit:
 			left = helpLine(h("type", "edit track"), h("Enter", "confirm"), h("Esc", "cancel"))
 		}

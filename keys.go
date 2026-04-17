@@ -17,6 +17,7 @@ type keyMap struct {
 	MoveUp     key.Binding
 	MoveDown   key.Binding
 	Delete     key.Binding
+	CopyTrack  key.Binding
 	Search     key.Binding
 	SortToggle key.Binding
 	Restore    key.Binding
@@ -66,6 +67,9 @@ var keys = keyMap{
 	),
 	Delete: key.NewBinding(
 		key.WithKeys("d", "x"),
+	),
+	CopyTrack: key.NewBinding(
+		key.WithKeys("c"),
 	),
 	Search: key.NewBinding(
 		key.WithKeys("f"),

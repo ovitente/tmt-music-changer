@@ -31,6 +31,7 @@ go build -o theme-changer .
 | s | All | Save |
 | e | Order | Edit track name |
 | a | Order/Toggle | Add custom track |
+| c | Order | Copy (duplicate) track |
 | d | Order | Delete track |
 | J/K | Order | Move track up/down |
 | Space | Toggle | Toggle track on/off |
