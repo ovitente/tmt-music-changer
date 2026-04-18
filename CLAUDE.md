@@ -32,6 +32,8 @@ go build -o theme-changer .
 | e | Order | Edit track name |
 | a | Order/Toggle | Add custom track |
 | c | Order | Copy (duplicate) track |
+| u | Order | Undo (up to 5 steps) |
+| r | Order | Shuffle tracks (mute_* spread apart) |
 | d | Order | Delete track |
 | J/K | Order | Move track up/down |
 | Space | Toggle | Toggle track on/off |

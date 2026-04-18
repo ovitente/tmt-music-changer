@@ -69,6 +69,9 @@ type Model struct {
 	editInput  string
 	editIsNew  bool // true = add new track, false = edit existing
 	editCursor int  // cursor position in editInput
+
+	// Undo stacks per mission (max 5 snapshots each)
+	undoStacks map[string][][]string
 }
 
 type saveResultMsg struct{ err error }
@@ -79,6 +82,7 @@ func NewModel(files []FileState) Model {
 		files:       files,
 		activePanel: PanelLeft,
 		mode:        ModeView,
+		undoStacks:  make(map[string][][]string),
 	}
 }
 
@@ -115,6 +119,22 @@ func (m *Model) recalcDirty() {
 	}
 }
 
+// pushUndo saves a snapshot of the current mission's themes for undo.
+func (m *Model) pushUndo() {
+	mission := m.currentMission()
+	if mission == nil {
+		return
+	}
+	stack := m.undoStacks[mission.Name]
+	snapshot := make([]string, len(mission.Themes))
+	copy(snapshot, mission.Themes)
+	stack = append(stack, snapshot)
+	if len(stack) > 5 {
+		stack = stack[1:]
+	}
+	m.undoStacks[mission.Name] = stack
+}
+
 func (m Model) currentMission() *Mission {
 	f := &m.files[m.activeFile]
 	if f.missionCursor >= 0 && f.missionCursor < len(f.missions) {
@@ -132,6 +152,7 @@ func (m *Model) toggleUSATrack(idx int) {
 	if mission == nil {
 		return
 	}
+	m.pushUndo()
 
 	track := "themes/" + tracks[idx]
 	isMute := idx >= len(USATracks)
@@ -174,6 +195,7 @@ func (m *Model) deleteTrack(idx int) {
 	if mission == nil || idx < 0 || idx >= len(mission.Themes) {
 		return
 	}
+	m.pushUndo()
 	mission.Themes = append(mission.Themes[:idx], mission.Themes[idx+1:]...)
 	m.recalcDirty()
 	if m.file().reorderCursor >= len(mission.Themes) && m.file().reorderCursor > 0 {
@@ -270,6 +292,7 @@ func (m *Model) moveTrack(from, to int) {
 	if from < 0 || from >= len(mission.Themes) || to < 0 || to >= len(mission.Themes) {
 		return
 	}
+	m.pushUndo()
 	mission.Themes[from], mission.Themes[to] = mission.Themes[to], mission.Themes[from]
 	m.recalcDirty()
 }
@@ -666,6 +689,7 @@ func (m Model) updateReorder(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case key.Matches(msg, keys.CopyTrack):
 		if len(mission.Themes) > 0 {
+			m.pushUndo()
 			track := mission.Themes[f.reorderCursor]
 			newThemes := make([]string, 0, len(mission.Themes)+1)
 			newThemes = append(newThemes, mission.Themes[:f.reorderCursor+1]...)
@@ -673,6 +697,26 @@ func (m Model) updateReorder(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			newThemes = append(newThemes, mission.Themes[f.reorderCursor+1:]...)
 			mission.Themes = newThemes
 			f.reorderCursor++
+			m.recalcDirty()
+		}
+
+	case key.Matches(msg, keys.Undo):
+		if mission != nil {
+			stack := m.undoStacks[mission.Name]
+			if len(stack) > 0 {
+				mission.Themes = stack[len(stack)-1]
+				m.undoStacks[mission.Name] = stack[:len(stack)-1]
+				if f.reorderCursor >= len(mission.Themes) {
+					f.reorderCursor = max(0, len(mission.Themes)-1)
+				}
+				m.recalcDirty()
+			}
+		}
+
+	case key.Matches(msg, keys.Shuffle):
+		if len(mission.Themes) > 1 {
+			m.pushUndo()
+			mission.Themes = shuffleTracks(mission.Themes)
 			m.recalcDirty()
 		}
 
@@ -695,6 +739,7 @@ func (m Model) updateEdit(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			f := m.file()
 			mission := m.currentMission()
 			if mission != nil {
+				m.pushUndo()
 				value := "themes/" + m.editInput
 				if m.editIsNew {
 					mission.Themes = append(mission.Themes, value)
@@ -1173,7 +1218,7 @@ func (m Model) renderStatus(totalWidth int) string {
 		case ModeAdd:
 			left = helpLine(h("j/k", "navigate"), h("Space", "toggle"), h("a", "add"), h("o", "order"), h("R", "restore"), h("s", "save"), h("Esc", "back"))
 		case ModeReorder:
-			left = helpLine(h("j/k", "navigate"), h("J/K", "move"), h("c", "copy"), h("d", "delete"), h("e", "edit"), h("a", "add"), h("t", "toggle"), h("s", "save"), h("Esc", "back"))
+			left = helpLine(h("j/k", "navigate"), h("J/K", "move"), h("c", "copy"), h("d", "delete"), h("e", "edit"), h("a", "add"), h("u", "undo"), h("r", "shuffle"), h("t", "toggle"), h("s", "save"), h("Esc", "back"))
 		case ModeEdit:
 			left = helpLine(h("type", "edit track"), h("Enter", "confirm"), h("Esc", "cancel"))
 		}

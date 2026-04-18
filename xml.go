@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"math/rand"
 	"regexp"
 	"sort"
 	"strconv"
@@ -76,6 +77,49 @@ func HasUSATrack(themes []string, track string) bool {
 		}
 	}
 	return false
+}
+
+// shuffleTracks randomly reorders tracks, ensuring mute_* tracks are not adjacent.
+func shuffleTracks(tracks []string) []string {
+	var mute, nonMute []string
+	for _, t := range tracks {
+		name := strings.TrimPrefix(t, "themes/")
+		if strings.HasPrefix(name, "mute_") {
+			mute = append(mute, t)
+		} else {
+			nonMute = append(nonMute, t)
+		}
+	}
+
+	rand.Shuffle(len(nonMute), func(i, j int) { nonMute[i], nonMute[j] = nonMute[j], nonMute[i] })
+	rand.Shuffle(len(mute), func(i, j int) { mute[i], mute[j] = mute[j], mute[i] })
+
+	// If not enough non-mute to separate all mutes, just shuffle everything
+	if len(nonMute) == 0 || len(mute) > len(nonMute)+1 {
+		all := make([]string, len(tracks))
+		copy(all, tracks)
+		rand.Shuffle(len(all), func(i, j int) { all[i], all[j] = all[j], all[i] })
+		return all
+	}
+
+	// Interleave: place mute tracks in slots between non-mute tracks
+	// Slots: _N_N_N_ (len(nonMute)+1 slots)
+	slots := len(nonMute) + 1
+	chosen := rand.Perm(slots)[:len(mute)]
+	sort.Ints(chosen) // keep stable order for insertion
+
+	result := make([]string, 0, len(tracks))
+	muteIdx := 0
+	for i := 0; i <= len(nonMute); i++ {
+		if muteIdx < len(chosen) && chosen[muteIdx] == i {
+			result = append(result, mute[muteIdx])
+			muteIdx++
+		}
+		if i < len(nonMute) {
+			result = append(result, nonMute[i])
+		}
+	}
+	return result
 }
 
 // ParseThemesXML parses the Excel XML Spreadsheet and extracts missions with byte offsets.
