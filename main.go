@@ -9,7 +9,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-const defaultModPath = `/mnt/d/SteamLibrary/steamapps/common/Terminator Dark Fate - Defiance/mods/GeneralsMusic`
+const defaultModPath = `/mnt/c/Program Files/Steam/steamapps/common/Terminator Dark Fate - Defiance/mods/GeneralsMusic`
 
 type ThemeFile struct {
 	Label   string
